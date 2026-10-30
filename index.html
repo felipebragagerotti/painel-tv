@@ -27,7 +27,7 @@
   //   #k=CHAVE_DO_PAINEL&r=ID1,ID2,ID3,ID4
   // k = chave do painel (Apps Script) | r = códigos dos dashboards da Reportei
   var PAINEL = 'https://script.google.com/macros/s/AKfycbwrSeyEP_43PIA-GOuEhFJDOrzIAud4igc2yzEirZUiS7hUzbKeR3C9LFmQSBhusfg7/exec';
-  var SEG_PAINEL = 150, SEG_REPORTEI = 25, RECARGA_REPORTEI = 900;
+  var SEG_PAINEL = 110, SEG_REPORTEI = 25, RECARGA_REPORTEI = 900;
 
   var cfg = {};
   location.hash.replace(/^#/, '').split('&').forEach(function (p) {
@@ -35,7 +35,7 @@
   });
 
   var TELAS = [];
-  if (cfg.k) TELAS.push({ url: PAINEL + '?k=' + encodeURIComponent(cfg.k), segundos: SEG_PAINEL, recarregarSeg: 0 });
+  if (cfg.k) TELAS.push({ url: PAINEL + '?k=' + encodeURIComponent(cfg.k), segundos: SEG_PAINEL, recarregarSeg: 0, precarregar: true });
   (cfg.r || '').split(',').filter(Boolean).forEach(function (id) {
     TELAS.push({ url: 'https://app.reportei.com/dashboard/' + id, segundos: SEG_REPORTEI, recarregarSeg: RECARGA_REPORTEI });
   });
@@ -73,6 +73,11 @@
       }
       animarBarra(TELAS[atual].segundos);
       setTimeout(proxima, TELAS[atual].segundos * 1000);
+      // Recarrega o painel ~6s antes da vez dele, para ele sempre começar na Visão geral
+      var prox = (atual + 1) % TELAS.length;
+      if (TELAS[prox].precarregar && prox !== atual) {
+        setTimeout(function () { frames[prox].el.src = TELAS[prox].url; }, Math.max(0, TELAS[atual].segundos - 6) * 1000);
+      }
     }
     // Encaixa o palco 1920x1080 na tela, seja qual for o tamanho que o navegador da TV informar
     function ajustar() {
