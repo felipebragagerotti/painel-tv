@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="robots" content="noindex, nofollow">
+<title>Painel TV</title>
+<style>
+  /* Palco fixo 1920x1080 (igual ao Chrome em tela cheia no PC), escalado para caber na TV */
+  :root { color-scheme: light; }
+  html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#fff; cursor:none; }
+  #palco { position:absolute; left:50%; top:50%; width:1920px; height:1080px; transform-origin:center; }
+  iframe { position:absolute; inset:0; width:1920px; height:1080px; border:0; background:#fff;
+           color-scheme: light; visibility:hidden; }
+  iframe.ativa { visibility:visible; }
+  #barra { position:fixed; left:0; bottom:0; height:4px; width:0; background:rgba(1,28,114,.35); z-index:10; }
+  #aviso { font:24px sans-serif; color:#011C72; text-align:center; margin-top:40vh; }
+</style>
+</head>
+<body>
+<div id="palco"></div>
+<div id="barra"></div>
+<script>
+  // Configuração vem no endereço, depois do "#", para não ficar nada sensível neste arquivo público:
+  //   #k=CHAVE_DO_PAINEL&r=ID1,ID2,ID3,ID4
+  // k = chave do painel (Apps Script) | r = códigos dos dashboards da Reportei
+  var PAINEL = 'https://script.google.com/macros/s/AKfycbwrSeyEP_43PIA-GOuEhFJDOrzIAud4igc2yzEirZUiS7hUzbKeR3C9LFmQSBhusfg7/exec';
+  var SEG_PAINEL = 150, SEG_REPORTEI = 25, RECARGA_REPORTEI = 900;
+
+  var cfg = {};
+  location.hash.replace(/^#/, '').split('&').forEach(function (p) {
+    var i = p.indexOf('='); if (i > 0) cfg[p.slice(0, i)] = decodeURIComponent(p.slice(i + 1));
+  });
+
+  var TELAS = [];
+  if (cfg.k) TELAS.push({ url: PAINEL + '?k=' + encodeURIComponent(cfg.k), segundos: SEG_PAINEL, recarregarSeg: 0 });
+  (cfg.r || '').split(',').filter(Boolean).forEach(function (id) {
+    TELAS.push({ url: 'https://app.reportei.com/dashboard/' + id, segundos: SEG_REPORTEI, recarregarSeg: RECARGA_REPORTEI });
+  });
+
+  if (!TELAS.length) {
+    document.body.innerHTML = '<div id="aviso">Link incompleto. Use o link completo do Painel TV.</div>';
+  } else {
+    var frames = [], atual = -1;
+    TELAS.forEach(function (t) {
+      var f = document.createElement('iframe');
+      f.src = t.url;
+      f.setAttribute('allow', 'fullscreen');
+      document.getElementById('palco').appendChild(f);
+      frames.push({ el: f, carregadoEm: Date.now() });
+    });
+
+    function recarregarSePreciso(i) {
+      var t = TELAS[i], f = frames[i];
+      if (t.recarregarSeg > 0 && Date.now() - f.carregadoEm >= t.recarregarSeg * 1000) {
+        f.el.src = t.url; f.carregadoEm = Date.now();
+      }
+    }
+    function animarBarra(seg) {
+      var b = document.getElementById('barra');
+      b.style.transition = 'none'; b.style.width = '0'; void b.offsetWidth;
+      b.style.transition = 'width ' + seg + 's linear'; b.style.width = '100%';
+    }
+    function proxima() {
+      var anterior = atual;
+      atual = (atual + 1) % TELAS.length;
+      frames[atual].el.classList.add('ativa');
+      if (anterior >= 0 && anterior !== atual) {
+        frames[anterior].el.classList.remove('ativa');
+        recarregarSePreciso(anterior);
+      }
+      animarBarra(TELAS[atual].segundos);
+      setTimeout(proxima, TELAS[atual].segundos * 1000);
+    }
+    function ajustar() {
+      var e = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      document.getElementById('palco').style.transform = 'translate(-50%,-50%) scale(' + e + ')';
+    }
+    window.addEventListener('resize', ajustar);
+    ajustar();
+    proxima();
+    // Recarrega a página inteira 1x por dia (madrugada) para liberar memória da TV
+    setInterval(function () { if (new Date().getHours() === 4) location.reload(); }, 3600 * 1000);
+  }
+</script>
+</body>
+</html>
