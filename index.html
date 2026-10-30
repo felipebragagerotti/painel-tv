@@ -2,19 +2,20 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=1920">
 <meta name="color-scheme" content="light">
 <meta name="robots" content="noindex, nofollow">
 <title>Painel TV</title>
 <style>
   /* Palco fixo 1920x1080 (igual ao Chrome em tela cheia no PC), escalado para caber na TV */
   :root { color-scheme: light; }
-  html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#fff; cursor:none; }
-  #palco { position:absolute; left:50%; top:50%; width:1920px; height:1080px; transform-origin:center; }
-  iframe { position:absolute; inset:0; width:1920px; height:1080px; border:0; background:#fff;
+  html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#F3F6FB; cursor:none; }
+  #palco { position:absolute; left:0; top:0; width:1920px; height:1080px; transform-origin:0 0; -webkit-transform-origin:0 0; }
+  iframe { position:absolute; top:0; left:0; width:1920px; height:1080px; border:0; background:#fff;
            color-scheme: light; visibility:hidden; }
   iframe.ativa { visibility:visible; }
   #barra { position:fixed; left:0; bottom:0; height:4px; width:0; background:rgba(1,28,114,.35); z-index:10; }
+  #debug { position:fixed; left:10px; top:10px; z-index:20; background:#011C72; color:#fff; font:20px monospace; padding:8px 12px; }
   #aviso { font:24px sans-serif; color:#011C72; text-align:center; margin-top:40vh; }
 </style>
 </head>
@@ -73,12 +74,26 @@
       animarBarra(TELAS[atual].segundos);
       setTimeout(proxima, TELAS[atual].segundos * 1000);
     }
+    // Encaixa o palco 1920x1080 na tela, seja qual for o tamanho que o navegador da TV informar
     function ajustar() {
-      var e = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
-      document.getElementById('palco').style.transform = 'translate(-50%,-50%) scale(' + e + ')';
+      var w = document.documentElement.clientWidth || window.innerWidth;
+      var h = document.documentElement.clientHeight || window.innerHeight;
+      var e = Math.min(w / 1920, h / 1080);
+      var x = (w - 1920 * e) / 2, y = (h - 1080 * e) / 2;
+      var t = 'translate(' + x + 'px,' + y + 'px) scale(' + e + ')';
+      var p = document.getElementById('palco');
+      p.style.webkitTransform = t; p.style.transform = t;
+      var d = document.getElementById('debug');
+      if (d) d.textContent = 'tela ' + w + 'x' + h + ' | inner ' + window.innerWidth + 'x' + window.innerHeight +
+        ' | dpr ' + window.devicePixelRatio + ' | escala ' + e.toFixed(3);
+    }
+    if (/[?&]debug/.test(location.search)) {
+      var d = document.createElement('div'); d.id = 'debug'; document.body.appendChild(d);
     }
     window.addEventListener('resize', ajustar);
+    window.addEventListener('orientationchange', ajustar);
     ajustar();
+    setTimeout(ajustar, 500); setTimeout(ajustar, 2000); setInterval(ajustar, 10000);
     proxima();
     // Recarrega a página inteira 1x por dia (madrugada) para liberar memória da TV
     setInterval(function () { if (new Date().getHours() === 4) location.reload(); }, 3600 * 1000);
