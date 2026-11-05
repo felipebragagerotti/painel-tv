@@ -27,10 +27,10 @@
   //   #k=CHAVE_DO_PAINEL&r=ID1,ID2,ID3
   // k = chave do painel (Apps Script) | r = códigos dos dashboards da Reportei, na ordem em que aparecem
   //
-  // Tempos: o painel fica SEG_PAINEL na tela (5 telas de vendas x 40 s + 2 do ClickUp x 95 s)
+  // Tempos: o painel fica SEG_PAINEL na tela (5 telas de vendas x 40 s + marketing 60 s + 2 do ClickUp x 95 s)
   // e cada Reportei fica SEG_REPORTEI. As trocas seguem o relógio, então o painel sempre
   // começa na tela 1 quando aparece e termina no slide de atividades por marca.
-  var SEG_PAINEL = 390, SEG_REPORTEI = 15, RECARGA_REPORTEI = 900;
+  var SEG_PAINEL = 450, SEG_REPORTEI = 15, RECARGA_REPORTEI = 900;
 
   var cfg = {};
   location.hash.replace(/^#/, '').split('&').forEach(function (p) {
