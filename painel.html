@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Aeroflex · Vendas</title>
+<style>
+  html, body { margin:0; height:100%; background:#F3F6FB; }
+  #msg { display:flex; height:100%; align-items:center; justify-content:center; text-align:center; padding:0 24px;
+         font:600 22px "Segoe UI", Arial, sans-serif; color:#0B1F7A; }
+</style>
+</head>
+<body>
+<div id="msg">Carregando o painel…</div>
+<script>
+  // Painel de vendas fora do Google: busca a tela pronta no Apps Script e mostra aqui.
+  // Assim não aparece o aviso cinza do Google e não dá erro com várias contas logadas.
+  // A chave fica no endereço, depois do "#": painel.html#k=CHAVE (nada sensível neste arquivo público).
+  var EXEC = 'https://script.google.com/macros/s/AKfycbwrSeyEP_43PIA-GOuEhFJDOrzIAud4igc2yzEirZUiS7hUzbKeR3C9LFmQSBhusfg7/exec';
+
+  var cfg = {};
+  location.hash.replace(/^#/, '').split('&').forEach(function (p) {
+    var i = p.indexOf('='); if (i > 0) cfg[p.slice(0, i)] = decodeURIComponent(p.slice(i + 1));
+  });
+
+  function aviso(t) { document.getElementById('msg').textContent = t; }
+
+  function carregar() {
+    fetch(EXEC + '?k=' + encodeURIComponent(cfg.k) + '&formato=html', { cache: 'no-store' })
+      .then(function (r) { return r.text(); })
+      .then(function (html) {
+        if (html.indexOf('const DATA_URL') < 0) { aviso('Link inválido ou antigo. Peça o link atualizado ao responsável pelo painel.'); return; }
+        document.open(); document.write(html); document.close();
+      })
+      .catch(function () { aviso('Sem conexão com o painel. Tentando de novo em 1 minuto…'); setTimeout(carregar, 60000); });
+  }
+
+  if (!cfg.k) aviso('Link incompleto. Use o link completo do painel.');
+  else carregar();
+</script>
+</body>
+</html>

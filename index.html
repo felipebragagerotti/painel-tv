@@ -24,19 +24,28 @@
 <div id="barra"></div>
 <script>
   // Configuração vem no endereço, depois do "#", para não ficar nada sensível neste arquivo público:
-  //   #k=CHAVE_DO_PAINEL&r=ID1,ID2,ID3,ID4
-  // k = chave do painel (Apps Script) | r = códigos dos dashboards da Reportei
-  var PAINEL = 'https://script.google.com/macros/s/AKfycbwrSeyEP_43PIA-GOuEhFJDOrzIAud4igc2yzEirZUiS7hUzbKeR3C9LFmQSBhusfg7/exec';
-  var SEG_PAINEL = 110, SEG_REPORTEI = 25, RECARGA_REPORTEI = 900;
+  //   #k=CHAVE_DO_PAINEL&r=ID1,ID2,ID3
+  // k = chave do painel (Apps Script) | r = códigos dos dashboards da Reportei, na ordem em que aparecem
+  //
+  // Tempos: o painel fica SEG_PAINEL na tela (5 telas de vendas x 40 s + 2 do ClickUp x 95 s)
+  // e cada Reportei fica SEG_REPORTEI. As trocas seguem o relógio, então o painel sempre
+  // começa na tela 1 quando aparece e termina no slide de atividades por marca.
+  var SEG_PAINEL = 390, SEG_REPORTEI = 15, RECARGA_REPORTEI = 900;
 
   var cfg = {};
   location.hash.replace(/^#/, '').split('&').forEach(function (p) {
     var i = p.indexOf('='); if (i > 0) cfg[p.slice(0, i)] = decodeURIComponent(p.slice(i + 1));
   });
 
+  var ids = (cfg.r || '').split(',').filter(Boolean);
+  var CICLO = (cfg.k ? SEG_PAINEL : 0) + ids.length * SEG_REPORTEI;
+
   var TELAS = [];
-  if (cfg.k) TELAS.push({ url: PAINEL + '?k=' + encodeURIComponent(cfg.k), segundos: SEG_PAINEL, recarregarSeg: 0, precarregar: true });
-  (cfg.r || '').split(',').filter(Boolean).forEach(function (id) {
+  if (cfg.k) TELAS.push({
+    url: 'painel.html#k=' + encodeURIComponent(cfg.k) + '&ciclo=' + CICLO + '&janela=' + SEG_PAINEL,
+    segundos: SEG_PAINEL, recarregarSeg: 0
+  });
+  ids.forEach(function (id) {
     TELAS.push({ url: 'https://app.reportei.com/dashboard/' + id, segundos: SEG_REPORTEI, recarregarSeg: RECARGA_REPORTEI });
   });
 
@@ -63,21 +72,19 @@
       b.style.transition = 'none'; b.style.width = '0'; void b.offsetWidth;
       b.style.transition = 'width ' + seg + 's linear'; b.style.width = '100%';
     }
+    // A tela da vez sai do relógio (mesma conta que o painel faz por dentro)
     function proxima() {
-      var anterior = atual;
-      atual = (atual + 1) % TELAS.length;
-      frames[atual].el.classList.add('ativa');
-      if (anterior >= 0 && anterior !== atual) {
-        frames[anterior].el.classList.remove('ativa');
-        recarregarSePreciso(anterior);
+      var pos = Date.now() % (CICLO * 1000), i = 0;
+      while (i < TELAS.length - 1 && pos >= TELAS[i].segundos * 1000) { pos -= TELAS[i].segundos * 1000; i++; }
+      var resta = TELAS[i].segundos * 1000 - pos;
+      if (i !== atual) {
+        var anterior = atual;
+        atual = i;
+        frames[atual].el.classList.add('ativa');
+        if (anterior >= 0) { frames[anterior].el.classList.remove('ativa'); recarregarSePreciso(anterior); }
+        animarBarra(resta / 1000);
       }
-      animarBarra(TELAS[atual].segundos);
-      setTimeout(proxima, TELAS[atual].segundos * 1000);
-      // Recarrega o painel ~6s antes da vez dele, para ele sempre começar na Visão geral
-      var prox = (atual + 1) % TELAS.length;
-      if (TELAS[prox].precarregar && prox !== atual) {
-        setTimeout(function () { frames[prox].el.src = TELAS[prox].url; }, Math.max(0, TELAS[atual].segundos - 6) * 1000);
-      }
+      setTimeout(proxima, Math.min(resta, 1000) + 20);
     }
     // Encaixa o palco 1920x1080 na tela, seja qual for o tamanho que o navegador da TV informar
     function ajustar() {
@@ -100,7 +107,7 @@
     ajustar();
     setTimeout(ajustar, 500); setTimeout(ajustar, 2000); setInterval(ajustar, 10000);
     proxima();
-    // Recarrega a página inteira 1x por dia (madrugada) para liberar memória da TV
+    // Recarrega a página inteira 1x por dia (madrugada): libera memória e pega versões novas do painel
     setInterval(function () { if (new Date().getHours() === 4) location.reload(); }, 3600 * 1000);
   }
 </script>
